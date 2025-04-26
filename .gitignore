@@ -1,0 +1,14 @@
+
+
+node_modules/
+
+.env .env.development .env.production
+
+logs .log npm-debug.logyarn-debug.log* yarn-error.log*
+
+tmp/ temp/
+
+.vscode/ .idea/
+
+package-lock.json
+

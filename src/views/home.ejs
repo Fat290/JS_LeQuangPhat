@@ -1,0 +1,373 @@
+<!-- Ô tìm kiếm -->
+<input
+  type="text"
+  id="searchInput"
+  placeholder="Tìm kiếm theo mã, tên, hoặc số điện thoại..."
+  class="w-full p-2 mb-4 border rounded"
+  onkeyup="searchPhongTro()"
+/>
+
+<div class="flex justify-end mb-4">
+    <button
+      class="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+      onclick="openCreateModal()"
+    >
+      Tạo mới
+    </button>
+    <button
+      id="deleteButton"
+      class="bg-red-500 text-white px-4 py-2 rounded disabled:bg-red-300"
+      onclick="confirmDelete()"
+      disabled
+    >
+      Xóa
+    </button>
+  </div>
+  
+  <!-- Bảng hiển thị -->
+  <table class="w-full border-collapse border" id="phongTroTable">
+    <thead>
+      <tr class="bg-gray-200">
+        <th class="border p-2">
+          <input
+            type="checkbox"
+            id="selectAll"
+            onclick="toggleSelectAll()"
+          />
+        </th>
+        <th class="border p-2">STT</th>
+        <th class="border p-2">Mã phòng trọ</th>
+        <th class="border p-2">Tên người thuê trọ</th>
+        <th class="border p-2">Số điện thoại</th>
+        <th class="border p-2">Ngày bắt đầu thuê trọ</th>
+        <th class="border p-2">Hình thức thanh toán</th>
+        <th class="border p-2">Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% phongTroList.forEach((item, index) => { %>
+        <tr>
+          <td class="border p-2">
+            <input
+              type="checkbox"
+              class="selectItem"
+              data-id="<%= item.MaPhong %>"
+              data-code="PT-<%= String(item.MaPhong).padStart(3, '0') %>"
+              onclick="updateDeleteButton()"
+            />
+          </td>
+          <td class="border p-2"><%= index + 1 %></td>
+          <td class="border p-2">PT-<%= String(item.MaPhong).padStart(3, '0') %></td>
+          <td class="border p-2"><%= item.TenNguoiThue %></td>
+          <td class="border p-2"><%= item.SoDienThoai %></td>
+          <td class="border p-2">
+            <% 
+              // Chuyển đổi định dạng ngày từ yyyy-mm-dd sang dd-mm-yyyy
+              const date = new Date(item.NgayBatDau);
+              const day = String(date.getDate()).padStart(2, '0');
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const year = date.getFullYear();
+              const formattedDate = `${day}-${month}-${year}`;
+            %>
+            <%= formattedDate %>
+          </td>
+          <td class="border p-2"><%= item.TenHinhThuc %></td>
+          <td class="border p-2"><%= item.GhiChu %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  
+  <!-- Modal tạo mới -->
+  <div id="createModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg w-1/2">
+      <h2 class="text-xl font-bold mb-4">Tạo mới thông tin thuê trọ</h2>
+      <form id="createForm" onsubmit="createPhongTro(event)">
+        <div class="space-y-4">
+          <div>
+            <input
+              type="text"
+              id="tenNguoiThue"
+              name="TenNguoiThue"
+              placeholder="Tên người thuê"
+              class="w-full p-2 border rounded"
+              required
+            />
+            <p id="tenNguoiThueError" class="text-red-500 text-sm hidden"></p>
+          </div>
+          <div>
+            <input
+              type="text"
+              id="soDienThoai"
+              name="SoDienThoai"
+              placeholder="Số điện thoại"
+              class="w-full p-2 border rounded"
+              required
+            />
+            <p id="soDienThoaiError" class="text-red-500 text-sm hidden"></p>
+          </div>
+          <div>
+            <input
+              type="date"
+              id="ngayBatDau"
+              name="NgayBatDau"
+              class="w-full p-2 border rounded"
+              required
+            />
+            <p id="ngayBatDauError" class="text-red-500 text-sm hidden"></p>
+          </div>
+          <select
+            name="MaHinhThucThanhToan"
+            class="w-full p-2 border rounded"
+            required
+          >
+            <option value="">Chọn hình thức thanh toán</option>
+            <% hinhThucList.forEach(pt => { %>
+              <option value="<%= pt.MaHinhThuc %>"><%= pt.TenHinhThuc %></option>
+            <% }) %>
+          </select>
+          <textarea
+            name="GhiChu"
+            placeholder="Ghi chú"
+            class="w-full p-2 border rounded"
+          ></textarea>
+          <div class="flex justify-end space-x-2">
+            <button
+              type="button"
+              class="bg-gray-500 text-white px-4 py-2 rounded"
+              onclick="closeCreateModal()"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              class="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              Lưu
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Thông báo thành công hoặc lỗi -->
+  <div id="notification" class="fixed top-4 right-4 p-4 rounded hidden">
+    <p id="notificationMessage" class="text-white"></p>
+  </div>
+  
+  <script>
+  // Hiển thị thông báo
+  function showNotification(message, isSuccess = true) {
+    const notification = document.getElementById('notification');
+    const messageElement = document.getElementById('notificationMessage');
+    messageElement.textContent = message;
+    notification.className = `fixed top-4 right-4 p-4 rounded ${isSuccess ? 'bg-green-500' : 'bg-red-500'} text-white`;
+    notification.classList.remove('hidden');
+    setTimeout(() => {
+      notification.classList.add('hidden');
+    }, 3000);
+  }
+  
+  // Mở modal tạo mới
+  function openCreateModal() {
+    const modal = document.getElementById('createModal');
+    modal.style.display = 'flex';
+    // Đặt ngày hiện tại làm giá trị tối thiểu
+    const today = new Date();
+    const ngayBatDauInput = document.getElementById('ngayBatDau');
+    ngayBatDauInput.setAttribute('min', today.toISOString().split('T')[0]);
+  }
+  
+  // Đóng modal tạo mới
+  function closeCreateModal() {
+    const modal = document.getElementById('createModal');
+    modal.style.display = 'none';
+    document.getElementById('createForm').reset();
+    // Ẩn thông báo lỗi
+    document.getElementById('tenNguoiThueError').classList.add('hidden');
+    document.getElementById('soDienThoaiError').classList.add('hidden');
+    document.getElementById('ngayBatDauError').classList.add('hidden');
+  }
+  
+  // Chuyển đổi định dạng ngày từ yyyy-mm-dd sang dd-mm-yyyy
+  function formatDateToDDMMYYYY(dateString) {
+    const [year, month, day] = dateString.split('-');
+    return `${day}-${month}-${year}`;
+  }
+  
+  // Kiểm tra dữ liệu hợp lệ
+  function validateForm(data) {
+    let isValid = true;
+  
+    // Kiểm tra tên người thuê trọ
+    const tenNguoiThue = data.TenNguoiThue;
+    const tenNguoiThueError = document.getElementById('tenNguoiThueError');
+    const nameRegex = /^[a-zA-Z\sàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ]+$/;
+    if (!nameRegex.test(tenNguoiThue) || tenNguoiThue.length < 5 || tenNguoiThue.length > 50) {
+      tenNguoiThueError.textContent = 'Tên người thuê phải từ 5-50 ký tự, không chứa số và ký tự đặc biệt';
+      tenNguoiThueError.classList.remove('hidden');
+      isValid = false;
+    } else {
+      tenNguoiThueError.classList.add('hidden');
+    }
+  
+    // Kiểm tra số điện thoại
+    const soDienThoai = data.SoDienThoai;
+    const soDienThoaiError = document.getElementById('soDienThoaiError');
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(soDienThoai)) {
+      soDienThoaiError.textContent = 'Số điện thoại phải là 10 chữ số';
+      soDienThoaiError.classList.remove('hidden');
+      isValid = false;
+    } else {
+      soDienThoaiError.classList.add('hidden');
+    }
+  
+    // Kiểm tra ngày bắt đầu
+    const ngayBatDau = data.NgayBatDau;
+    const ngayBatDauError = document.getElementById('ngayBatDauError');
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(ngayBatDau)) {
+      ngayBatDauError.textContent = 'Vui lòng chọn ngày hợp lệ';
+      ngayBatDauError.classList.remove('hidden');
+      isValid = false;
+    } else {
+      const inputDate = new Date(ngayBatDau);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (inputDate < today) {
+        ngayBatDauError.textContent = 'Ngày bắt đầu không được là ngày trong quá khứ';
+        ngayBatDauError.classList.remove('hidden');
+        isValid = false;
+      } else {
+        ngayBatDauError.classList.add('hidden');
+      }
+    }
+  
+    return isValid;
+  }
+  
+  // Tạo mới phòng trọ
+  async function createPhongTro(event) {
+    event.preventDefault();
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    let data = Object.fromEntries(formData);
+  
+    // Kiểm tra dữ liệu hợp lệ
+    if (!validateForm(data)) {
+      return;
+    }
+  
+    // Chuyển đổi định dạng ngày trước khi gửi
+    data.NgayBatDau = formatDateToDDMMYYYY(data.NgayBatDau);
+  
+    try {
+      // Gửi request tạo mới
+      const response = await fetch('/phongtro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        showNotification('Tạo mới thành công!', true);
+        closeCreateModal();
+        searchPhongTro();
+      } else {
+        showNotification(result.message || 'Tạo mới thất bại!', false);
+      }
+    } catch (error) {
+      showNotification('Lỗi khi tạo mới: ' + error.message, false);
+    }
+  }
+  
+  // Tìm kiếm phòng trọ
+  async function searchPhongTro() {
+    const keyword = document.getElementById('searchInput').value;
+    try {
+      const response = await fetch(`/phongtro/search?keyword=${keyword}`);
+      const phongTroList = await response.json();
+      const tbody = document.querySelector('#phongTroTable tbody');
+      tbody.innerHTML = '';
+      phongTroList.forEach((item, index) => {
+        const date = new Date(item.NgayBatDau);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const formattedDate = `${day}-${month}-${year}`;
+        tbody.innerHTML += `
+          <tr>
+            <td class="border p-2">
+              <input type="checkbox" class="selectItem" data-id="${item.MaPhong}" data-code="PT-${String(item.MaPhong).padStart(3, '0')}" onclick="updateDeleteButton()" />
+            </td>
+            <td class="border p-2">${index + 1}</td>
+            <td class="border p-2">PT-${String(item.MaPhong).padStart(3, '0')}</td>
+            <td class="border p-2">${item.TenNguoiThue}</td>
+            <td class="border p-2">${item.SoDienThoai}</td>
+            <td class="border p-2">${formattedDate}</td>
+            <td class="border p-2">${item.TenHinhThuc}</td>
+            <td class="border p-2">${item.GhiChu}</td>
+          </tr>
+        `;
+      });
+    } catch (error) {
+      showNotification('Lỗi khi tìm kiếm: ' + error.message, false);
+    }
+  }
+  
+  // Chọn/xóa checkbox
+  function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.selectItem');
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = selectAll.checked;
+    });
+    updateDeleteButton();
+  }
+  
+  function updateDeleteButton() {
+    const checkboxes = document.querySelectorAll('.selectItem:checked');
+    document.getElementById('deleteButton').disabled = checkboxes.length === 0;
+  }
+  
+  // Hiển thị popup xác nhận trước khi xóa
+  function confirmDelete() {
+    const checkboxes = document.querySelectorAll('.selectItem:checked');
+    if (checkboxes.length === 0) return;
+  
+    // Lấy danh sách mã phòng trọ đã chọn
+    const codes = Array.from(checkboxes).map(cb => cb.getAttribute('data-code'));
+    const message = `Bạn có muốn xóa thông tin thuê trọ ${codes.join(', ')} hay không?`;
+  
+    // Hiển thị popup xác nhận
+    const confirmed = window.confirm(message);
+    if (confirmed) {
+      deleteSelected();
+    }
+  }
+  
+  async function deleteSelected() {
+    const checkboxes = document.querySelectorAll('.selectItem:checked');
+    const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
+    if (ids.length === 0) return;
+    try {
+      const response = await fetch('/phongtro', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      const result = await response.json();
+      if (response.ok) {
+        showNotification('Xóa thành công!', true);
+        searchPhongTro();
+      } else {
+        showNotification(result.message || 'Xóa thất bại!', false);
+      }
+    } catch (error) {
+      showNotification('Lỗi khi xóa: ' + error.message, false);
+    }
+  }
+  </script>
